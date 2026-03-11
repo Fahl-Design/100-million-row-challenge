@@ -2,8 +2,6 @@
 
 namespace App;
 
-use RuntimeException;
-
 final class Parser
 {
     public function parse(string $inputPath, string $outputPath): void
@@ -12,7 +10,6 @@ final class Parser
         \ini_set('memory_limit', '-1');
         \ini_set('pcre.backtrack_limit', '10000000');
         \ini_set('igbinary.compact_strings', '1');
-        \ini_set('zend.assertions', '-1');
         \gc_disable();
 
         $fileSize = (int)\filesize($inputPath);
@@ -23,8 +20,9 @@ final class Parser
 
         // Hardware-aware core detection
         $nproc = (int) (\shell_exec('nproc 2>/dev/null') ?: \shell_exec('sysctl -n hw.ncpu 2>/dev/null') ?: 8);
-        $numCores = (\function_exists('pcntl_fork') && $fileSize > 20 * 1024 * 1024) ? $nproc : 1;
+        $numCores = (\function_exists('pcntl_fork') && $fileSize > 5 * 1024 * 1024) ? $nproc : 1;
 
+        // Use /dev/shm on Linux for zero-disk IPC, fallback to temp on macOS
         $shmPath = \is_dir('/dev/shm') ? '/dev/shm' : \sys_get_temp_dir();
 
         $processSegment = static function (string $inputPath, int $start, int $end) {
